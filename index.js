@@ -14,16 +14,17 @@ const allowedOrigins = ["http://localhost:5173", "https://cesi-2025.netlify.app"
 
 app.use(cors({
   origin: function(origin, callback) {
-    // Permite solicitudes sin origen (como Postman o Curl)
+    // Permitir solicitudes sin origin (postman, curl)
     if (!origin) return callback(null, true);
-    if (allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
     } else {
-      callback(new Error("Origen no permitido por CORS"));
+      return callback(new Error("Origen no permitido por CORS"));
     }
   }
 }));
 
+app.options("*", cors()); // habilitar preflight para todas las rutas
 // Configura aquí tu cuenta SMTP real (ejemplo con Gmail o tu proveedor)
 const transporter = nodemailer.createTransport({
   host: process.env.EMAIL_HOST,     // smtp.gmail.com
