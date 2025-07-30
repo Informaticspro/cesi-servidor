@@ -11,32 +11,25 @@ const PORT = process.env.PORT || 3001;
 app.use(express.static("public"));
 app.use(express.json());
 
+
+const cors = require("cors");
+
 const allowedOrigins = [
   "http://localhost:5173",
-  "https://cesi-2025.netlify.app",
-  "capacitor://localhost",
-  "http://localhost",
-  "https://localhost",
-  "file://"
+  "https://cesi-2025.netlify.app"
 ];
 
-// Middleware para loguear el origen recibido (útil para depuración)
-app.use((req, res, next) => {
-  console.log("Origen recibido en la petición:", req.headers.origin);
-  next();
-});
-
 app.use(cors({
-  origin: function(origin, callback) {
-    if (!origin) return callback(null, true); // Permite requests sin origen (postman, curl)
-    console.log("Allowed origins:", allowedOrigins);
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true); // Permite herramientas como Postman
     if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
+      return callback(null, origin); // Devuelve exactamente el origin permitido
     } else {
-      console.log("CORS Rejected:", origin);
-      return callback(new Error("Origen no permitido por CORS"));
+      return callback(new Error("No permitido por CORS"));
     }
-  }
+  },
+  methods: ["GET", "POST"],
+  allowedHeaders: ["Content-Type"]
 }));
 
 app.options("*", cors()); // habilitar preflight para todas las rutas
