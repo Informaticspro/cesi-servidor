@@ -2,24 +2,36 @@ import express from "express";
 import nodemailer from "nodemailer";
 import QRCode from "qrcode";
 import cors from "cors";
+import dotenv from "dotenv";
+dotenv.config();
 
 const app = express();
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
 
 app.use(express.static("public"));
 app.use(express.json());
+const allowedOrigins = ["http://localhost:5173", "https://cesi-2025.netlify.app"];
+
 app.use(cors({
-  origin: "http://localhost:5173"
+  origin: function(origin, callback) {
+    // Permite solicitudes sin origen (como Postman o Curl)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error("Origen no permitido por CORS"));
+    }
+  }
 }));
 
 // Configura aquí tu cuenta SMTP real (ejemplo con Gmail o tu proveedor)
 const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com", // ej: smtp.gmail.com
-  port: 587,                    // puerto para TLS
+  host: process.env.EMAIL_HOST,     // smtp.gmail.com
+  port: parseInt(process.env.EMAIL_PORT), // 587
   secure: false,
   auth: {
-    user: "informaticsproservices@gmail.com",
-    pass: "jdqr azqv grok ehkl",
+    user: process.env.EMAIL_USER,   // ej: informaticsproservices@gmail.com
+    pass: process.env.EMAIL_PASS,   // tu contraseña o app password
   },
 });
 
