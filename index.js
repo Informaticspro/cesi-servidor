@@ -12,8 +12,6 @@ app.use(express.static("public"));
 app.use(express.json());
 
 
-const cors = require("cors");
-
 const allowedOrigins = [
   "http://localhost:5173",
   "https://cesi-2025.netlify.app"
