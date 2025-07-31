@@ -3,22 +3,22 @@ import cors from "cors";
 import QRCode from "qrcode";
 import nodemailer from "nodemailer";
 import dotenv from "dotenv";
-
+import fs from "fs";
+import path from "path";
 
 dotenv.config();
 
-
-
-
-
 const app = express();
 const PORT = process.env.PORT || 3001;
-
 
 app.use(cors({
   origin: ["http://localhost:5173", "https://cesi-2025.netlify.app"]
 }));
 app.use(express.json());
+
+// Leer logo y convertir a base64 solo una vez al iniciar el servidor
+const logoPath = path.resolve("./public/logo-cesi.png"); // Ajusta la ruta según tu proyecto
+const logoBase64 = "data:image/png;base64," + fs.readFileSync(logoPath).toString("base64");
 
 const transporter = nodemailer.createTransport({
   host: process.env.EMAIL_HOST,
@@ -39,21 +39,17 @@ app.post("/api/registro", async (req, res) => {
 
     const qrDataUrl = await QRCode.toDataURL(cedula);
 
- const html = `
-  <div style="font-family: Arial, sans-serif; color: #333;">
-    <img 
-      src="https://jsovuliafimiyxqtsnya.supabase.co/storage/v1/object/public/imagenes/LOGO-CESI.jpg" 
-      alt="Logo CESI 2025" 
-      style="max-width: 150px; margin-bottom: 20px;" 
-    />
-    <h2>Hola, ${nombre}!</h2>
-    <p>Gracias por registrarte en CESI 2025.</p>
-    <p>Este es tu código QR para el evento:</p>
-    <img src="${qrDataUrl}" alt="Código QR" style="width: 200px; height: 200px;" />
-    <p>Pronto recibirás el link para la conferencia virtual.</p>
-    <p>¡Nos vemos pronto!</p>
-  </div>
-`;
+    const html = `
+      <div style="font-family: Arial, sans-serif; color: #333;">
+        <img src="${logoBase64}" alt="Logo CESI 2025" style="max-width: 150px; margin-bottom: 20px;" />
+        <h2>Hola, ${nombre}!</h2>
+        <p>Gracias por registrarte en CESI 2025.</p>
+        <p>Este es tu código QR para el evento:</p>
+        <img src="${qrDataUrl}" alt="Código QR" style="width: 200px; height: 200px;" />
+        <p>Pronto recibirás el link para la conferencia virtual.</p>
+        <p>¡Nos vemos pronto!</p>
+      </div>
+    `;
 
     await transporter.sendMail({
       from: `"CESI 2025" <${process.env.EMAIL_USER}>`,
