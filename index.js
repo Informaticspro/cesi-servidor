@@ -7,6 +7,8 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+// 👇 Esta línea sirve la carpeta "public"
+app.use(express.static(path.join(__dirname, 'public')));
 
 app.use(cors({
   origin: ["http://localhost:5173", "https://cesi-2025.netlify.app"]
