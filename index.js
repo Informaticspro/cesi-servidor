@@ -34,6 +34,7 @@ app.post("/api/registro", async (req, res) => {
 
     const html = `
       <div style="font-family: Arial, sans-serif; color: #333;">
+      <img src="https://cesi-servidor.onrender.com/logo-cesi.png" alt="Logo CESI 2025" style="max-width: 150px; margin-bottom: 20px;" />
         <h2>Hola, ${nombre}!</h2>
         <p>Gracias por registrarte en CESI 2025.</p>
         <p>Este es tu código QR para el evento:</p>
