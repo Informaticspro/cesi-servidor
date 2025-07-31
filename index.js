@@ -17,7 +17,7 @@ app.use(cors({
 app.use(express.json());
 
 // Leer logo y convertir a base64 solo una vez al iniciar el servidor
-const logoPath = path.resolve("./public/logo-cesi.png"); // Ajusta la ruta según tu proyecto
+const logoPath = path.resolve("./servidor-cesi/public/logo-cesi.png"); // Ajusta la ruta según tu proyecto
 const logoBase64 = "data:image/png;base64," + fs.readFileSync(logoPath).toString("base64");
 
 const transporter = nodemailer.createTransport({
