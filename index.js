@@ -39,17 +39,21 @@ app.post("/api/registro", async (req, res) => {
 
     const qrDataUrl = await QRCode.toDataURL(cedula);
 
-    const html = `
-      <div style="font-family: Arial, sans-serif; color: #333;">
-      <img src="https://jsovuliafimiyxqtsnya.supabase.co/storage/v1/object/public/imagenes//LOGO-CESI.jpg" alt="Logo CESI" style="width: 150px;" />
-        <h2>Hola, ${nombre}!</h2>
-        <p>Gracias por registrarte en CESI 2025.</p>
-        <p>Este es tu código QR para el evento:</p>
-        <img src="${qrDataUrl}" alt="Código QR" style="width: 200px; height: 200px;" />
-        <p>Pronto recibirás el link para la conferencia virtual.</p>
-        <p>¡Nos vemos pronto!</p>
-      </div>
-    `;
+ const html = `
+  <div style="font-family: Arial, sans-serif; color: #333;">
+    <img 
+      src="https://jsovuliafimiyxqtsnya.supabase.co/storage/v1/object/public/imagenes/LOGO-CESI.jpg" 
+      alt="Logo CESI 2025" 
+      style="max-width: 150px; margin-bottom: 20px;" 
+    />
+    <h2>Hola, ${nombre}!</h2>
+    <p>Gracias por registrarte en CESI 2025.</p>
+    <p>Este es tu código QR para el evento:</p>
+    <img src="${qrDataUrl}" alt="Código QR" style="width: 200px; height: 200px;" />
+    <p>Pronto recibirás el link para la conferencia virtual.</p>
+    <p>¡Nos vemos pronto!</p>
+  </div>
+`;
 
     await transporter.sendMail({
       from: `"CESI 2025" <${process.env.EMAIL_USER}>`,
