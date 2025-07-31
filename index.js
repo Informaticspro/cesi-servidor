@@ -3,21 +3,17 @@ import cors from "cors";
 import QRCode from "qrcode";
 import nodemailer from "nodemailer";
 import dotenv from "dotenv";
-import path from "path";
-import { fileURLToPath } from "url";
+
 
 dotenv.config();
 
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 
 
 const app = express();
 const PORT = process.env.PORT || 3001;
-// 👇 Esta línea sirve la carpeta "public"
-app.use(express.static(path.join(__dirname, 'public')));
+
 
 app.use(cors({
   origin: ["http://localhost:5173", "https://cesi-2025.netlify.app"]
@@ -45,7 +41,7 @@ app.post("/api/registro", async (req, res) => {
 
     const html = `
       <div style="font-family: Arial, sans-serif; color: #333;">
-      <img src="https://cesi-servidor.onrender.com/logo-cesi.png" alt="Logo CESI 2025" style="max-width: 150px; margin-bottom: 20px;" />
+      <img src="https://jsovuliafimiyxqtsnya.supabase.co/storage/v1/object/public/imagenes//LOGO-CESI.jpg" style="max-width: 150px; margin-bottom: 20px;" />
         <h2>Hola, ${nombre}!</h2>
         <p>Gracias por registrarte en CESI 2025.</p>
         <p>Este es tu código QR para el evento:</p>
