@@ -16,9 +16,7 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// Leer logo y convertir a base64 solo una vez al iniciar el servidor
-const logoPath = path.resolve("./servidor-cesi/public/logo-cesi.png"); // Ajusta la ruta según tu proyecto
-const logoBuffer = fs.readFileSync(logoPath); // No uses base64 aquí
+const logoPath = path.join(__dirname, "public", "logo-cesi.png"); // 👈 Ajuste robusto
 
 const transporter = nodemailer.createTransport({
   host: process.env.EMAIL_HOST,
@@ -41,13 +39,11 @@ app.post("/api/registro", async (req, res) => {
 
     const html = `
       <div style="font-family: Arial, sans-serif; color: #333;">
-        <img src="cid:logo_cid" alt="Logo CESI 2025" style="max-width: 150px; margin-bottom: 20px;" />
+        <img src="cid:logo_cesi" alt="Logo CESI 2025" style="max-width: 150px;" />
         <h2>Hola, ${nombre}!</h2>
         <p>Gracias por registrarte en CESI 2025.</p>
-        <p>Este es tu código QR para el evento:</p>
-        <img src="${qrDataUrl}" alt="Código QR" style="width: 200px; height: 200px;" />
-        <p>Pronto recibirás el link para la conferencia virtual.</p>
-        <p>¡Nos vemos pronto!</p>
+        <p>Este es tu código QR:</p>
+        <img src="${qrDataUrl}" alt="Código QR" style="width: 200px;" />
       </div>
     `;
 
@@ -58,11 +54,11 @@ app.post("/api/registro", async (req, res) => {
       html,
       attachments: [
         {
-          filename: 'logo-cesi.png',
-          content: logoBuffer,
-          cid: 'logo_cid', // 👈 este ID lo usamos en el src del img
-        },
-      ],
+          filename: "logo-cesi.png",
+          path: logoPath,           // 👈 usa "path" directamente
+          cid: "logo_cesi"          // 👈 debe coincidir con el src="cid:logo_cesi"
+        }
+      ]
     });
 
     res.json({ ok: true, message: "Correo enviado exitosamente" });
@@ -70,4 +66,8 @@ app.post("/api/registro", async (req, res) => {
     console.error("Error al enviar correo:", error);
     res.status(500).json({ ok: false, error: error.message });
   }
+});
+
+app.listen(PORT, () => {
+  console.log(`Servidor CESI escuchando en http://localhost:${PORT}`);
 });
