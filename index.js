@@ -18,7 +18,7 @@ app.use(express.json());
 
 // Leer logo y convertir a base64 solo una vez al iniciar el servidor
 const logoPath = path.resolve("./servidor-cesi/public/logo-cesi.png"); // Ajusta la ruta según tu proyecto
-const logoBase64 = "data:image/png;base64," + fs.readFileSync(logoPath).toString("base64");
+const logoBuffer = fs.readFileSync(logoPath); // No uses base64 aquí
 
 const transporter = nodemailer.createTransport({
   host: process.env.EMAIL_HOST,
@@ -41,7 +41,7 @@ app.post("/api/registro", async (req, res) => {
 
     const html = `
       <div style="font-family: Arial, sans-serif; color: #333;">
-        <img src="${logoBase64}" alt="Logo CESI 2025" style="max-width: 150px; margin-bottom: 20px;" />
+        <img src="cid:logo_cid" alt="Logo CESI 2025" style="max-width: 150px; margin-bottom: 20px;" />
         <h2>Hola, ${nombre}!</h2>
         <p>Gracias por registrarte en CESI 2025.</p>
         <p>Este es tu código QR para el evento:</p>
@@ -56,6 +56,13 @@ app.post("/api/registro", async (req, res) => {
       to: correo,
       subject: "Bienvenido a CESI 2025",
       html,
+      attachments: [
+        {
+          filename: 'logo-cesi.png',
+          content: logoBuffer,
+          cid: 'logo_cid', // 👈 este ID lo usamos en el src del img
+        },
+      ],
     });
 
     res.json({ ok: true, message: "Correo enviado exitosamente" });
@@ -63,8 +70,4 @@ app.post("/api/registro", async (req, res) => {
     console.error("Error al enviar correo:", error);
     res.status(500).json({ ok: false, error: error.message });
   }
-});
-
-app.listen(PORT, () => {
-  console.log(`Servidor escuchando en http://localhost:${PORT}`);
 });
