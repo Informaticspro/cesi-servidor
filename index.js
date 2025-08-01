@@ -54,19 +54,13 @@ const html = `
       </div>
     `;
 
-    await transporter.sendMail({
-      from: `"CESI 2025" <${process.env.EMAIL_USER}>`,
-      to: correo,
-      subject: "Bienvenido a CESI 2025",
-      html,
-      attachments: [
-        {
-          filename: "logo-cesi.png",
-          path: logoPath,           // 👈 usa "path" directamente
-          cid: "logo_cesi"          // 👈 debe coincidir con el src="cid:logo_cesi"
-        }
-      ]
-    });
+ 
+await transporter.sendMail({
+  from: `"CESI 2025" <${process.env.EMAIL_USER}>`,
+  to: correo,
+  subject: "Bienvenido a CESI 2025",
+  html
+});
 
     res.json({ ok: true, message: "Correo enviado exitosamente" });
   } catch (error) {
