@@ -16,6 +16,10 @@ app.use(cors({
 }));
 app.use(express.json());
 
+// Definición correcta de __dirname en módulo ES
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const logoPath = path.join(__dirname, "public", "logo-cesi.png"); // 👈 Ajuste robusto
 
 const transporter = nodemailer.createTransport({
