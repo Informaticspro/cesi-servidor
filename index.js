@@ -36,10 +36,11 @@ app.post("/api/registro", async (req, res) => {
     }
 
     const qrDataUrl = await QRCode.toDataURL(cedula);
+const logoPublicUrl = "https://jsovuliafimiyxqtsnya.supabase.co/storage/v1/object/public/imagenes/LOGO-CESI.jpg";
 
-    const html = `
-      <div style="font-family: Arial, sans-serif; color: #333;">
-        <img src="cid:logo_cesi" alt="Logo CESI 2025" style="max-width: 150px;" />
+const html = `
+  <div style="font-family: Arial, sans-serif; color: #333;">
+    <img src="${logoPublicUrl}" alt="Logo CESI 2025" style="max-width: 150px;" />
         <h2>Hola, ${nombre}!</h2>
         <p>Gracias por registrarte en CESI 2025.</p>
         <p>Este es tu código QR:</p>
