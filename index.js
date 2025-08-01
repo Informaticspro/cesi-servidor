@@ -44,6 +44,12 @@ app.post("/api/registro", async (req, res) => {
         <p>Gracias por registrarte en CESI 2025.</p>
         <p>Este es tu código QR:</p>
         <img src="${qrDataUrl}" alt="Código QR" style="width: 200px;" />
+            <p>
+            Visita nuestro canal oficial en 
+            <a href="https://www.youtube.com/@FACULTADDEECONOMIAUNACHI" target="_blank" style="color: #1a73e8; text-decoration: none;">
+           YouTube
+            </a>
+            </p>
       </div>
     `;
 
