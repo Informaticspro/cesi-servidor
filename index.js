@@ -11,10 +11,31 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://cesi-2025.netlify.app",
+  "capacitor://localhost",   // para apps móviles (Android/iOS con Capacitor)
+  "http://localhost"         // para pruebas locales APK
+];
 
 
+app.use(cors({
+  origin: function (origin, callback) {
+    // Permitir requests sin origen (como desde apps móviles nativas)
+    if (!origin || origin === "null") {
+      return callback(null, true);
+    }
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error("No permitido por CORS"));
+  },
+  methods: ["GET", "POST", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"]
+}));
 
-//app.options("*", cors());
+
+app.options("*", cors());
 app.use(express.json());
 
 
