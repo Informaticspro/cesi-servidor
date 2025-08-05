@@ -12,8 +12,16 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 app.use(cors({
-  origin: ["http://localhost:5173", "https://cesi-2025.netlify.app"]
+  origin: ["http://localhost:5173", "https://cesi-2025.netlify.app", "http://localhost", "capacitor://localhost" ],
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"]
+  
 }));
+
+
+// Esto permite que las solicitudes OPTIONS (preflight) funcionen correctamente
+app.options("*", cors());
+
 app.use(express.json());
 
 
