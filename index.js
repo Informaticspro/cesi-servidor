@@ -19,20 +19,7 @@ const allowedOrigins = [
 ];
 
 
-app.use(cors({
-  origin: function (origin, callback) {
-    // Permitir requests sin origen (como desde apps móviles nativas)
-    if (!origin || origin === "null") {
-      return callback(null, true);
-    }
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-    return callback(new Error("No permitido por CORS"));
-  },
-  methods: ["GET", "POST", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"]
-}));
+app.use(cors()); 
 
 
 app.options("*", cors());
