@@ -12,8 +12,25 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 app.use(cors({
-  origin: ["http://localhost:5173", "https://cesi-2025.netlify.app"]
+  origin: function (origin, callback) {
+    if (!origin || origin === "null") {
+      return callback(null, true);
+    }
+    const allowedOrigins = [
+      "http://localhost:5173",
+      "https://cesi-2025.netlify.app"
+    ];
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error("No permitido por CORS"));
+  },
+  methods: ["GET", "POST", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"]
 }));
+
+
+app.options("*", cors());
 app.use(express.json());
 
 
