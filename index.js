@@ -16,7 +16,8 @@ const allowedOrigins = [
   "http://localhost:5173",           // dev web local
   "https://cesi-2025.netlify.app",  // web deploy
   "capacitor://localhost",           // apk Capacitor Android/iOS
-  "http://localhost"                 // apk dev local
+  "http://localhost"  ,
+     "https://localhost",             // apk dev local
 ];
 
 app.use(cors({
