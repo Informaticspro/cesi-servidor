@@ -11,18 +11,12 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-const allowedOrigins = [
-  "http://localhost:5173",
-  "https://cesi-2025.netlify.app",
-  "capacitor://localhost",   // para apps móviles (Android/iOS con Capacitor)
-  "http://localhost"         // para pruebas locales APK
-];
+
 
 
 app.use(cors()); 
 
 
-app.options("*", cors());
 app.use(express.json());
 
 
