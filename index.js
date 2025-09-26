@@ -48,7 +48,7 @@ const transporter = nodemailer.createTransport({
 app.get("/api/test-email", async (req, res) => {
   try {
     await transporter.sendMail({
-      from: `"CESI 2025" <${process.env.EMAIL_USER}>`,
+      from: `"CESI 2025" <$jose.acosta@unachi.ac.pa>`,
       to: "jose.acosta@unachi.ac.pa", // cámbialo por un correo real tuyo
       subject: "Prueba Render SMTP",
       text: "¡Funciona el envío desde Render con Gmail!"
@@ -100,7 +100,7 @@ app.post("/api/registro", async (req, res) => {
 
     // 5. Enviar correo
     await transporter.sendMail({
-      from: `"CESI 2025" <${process.env.EMAIL_USER}>`,
+      from: `"CESI 2025" <jose.acosta@unachi.ac.pa>`,
       to: correo,
       subject: "Bienvenido a CESI 2025",
       html,
