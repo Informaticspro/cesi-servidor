@@ -11,6 +11,7 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Orígenes permitidos
 const allowedOrigins = [
   "http://localhost:5173",
   "https://cesi-2025.netlify.app",
@@ -22,9 +23,7 @@ const allowedOrigins = [
 app.use(cors({
   origin: function (origin, callback) {
     if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
+    if (allowedOrigins.includes(origin)) return callback(null, true);
     callback(new Error("No permitido por CORS"));
   },
   methods: ["GET", "POST", "OPTIONS"],
@@ -33,25 +32,28 @@ app.use(cors({
 
 app.use(express.json());
 
+// Transporter Nodemailer para SendGrid
 const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST,
+  host: process.env.EMAIL_HOST, // smtp.sendgrid.net
   port: 587,
   secure: false,
   auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
+    user: "apikey",              // obligatorio usar "apikey" literal
+    pass: process.env.EMAIL_PASS // tu API Key de SendGrid
   },
   tls: {
     rejectUnauthorized: false
   }
 });
+
+// Endpoint de prueba
 app.get("/api/test-email", async (req, res) => {
   try {
     await transporter.sendMail({
-      from: `"CESI 2025" <$jose.acosta@unachi.ac.pa>`,
-      to: "jose.acosta@unachi.ac.pa", // cámbialo por un correo real tuyo
-      subject: "Prueba Render SMTP",
-      text: "¡Funciona el envío desde Render con Gmail!"
+      from: `"CESI 2025" <jose.acosta@unachi.ac.pa>`, // remitente verificado en SendGrid
+      to: "jose.acosta@unachi.ac.pa", // correo para recibir prueba
+      subject: "Prueba Render + SendGrid",
+      text: "¡Funciona el envío desde Render usando SendGrid!"
     });
 
     res.json({ ok: true, message: "Correo de prueba enviado exitosamente" });
@@ -61,6 +63,7 @@ app.get("/api/test-email", async (req, res) => {
   }
 });
 
+// Endpoint de registro
 app.post("/api/registro", async (req, res) => {
   try {
     const { nombre, correo, cedula } = req.body;
@@ -68,19 +71,19 @@ app.post("/api/registro", async (req, res) => {
       return res.status(400).json({ ok: false, error: "Faltan datos obligatorios" });
     }
 
-    // 1. Generar QR para inline
+    // QR para inline
     const qrDataUrlInline = await QRCode.toDataURL(cedula);
     const qrBufferInline = Buffer.from(qrDataUrlInline.split(",")[1], "base64");
 
-    // 2. Generar QR para adjunto (distinto para que el cliente de correo lo detecte como archivo)
+    // QR para adjunto
     const qrDataUrlAttach = await QRCode.toDataURL(cedula + "-adjunto");
     const qrBufferAttach = Buffer.from(qrDataUrlAttach.split(",")[1], "base64");
 
-    // 3. Logo desde carpeta local
+    // Logo local
     const logoPath = path.join(process.cwd(), "public", "logo-cesi.png");
     const logoBuffer = fs.readFileSync(logoPath);
 
-    // 4. HTML del correo
+    // HTML correo
     const html = `
       <div style="font-family: Arial, sans-serif; color: #333;">
         <img src="cid:logoimage" alt="Logo CESI 2025" style="max-width: 150px;" />
@@ -98,29 +101,16 @@ app.post("/api/registro", async (req, res) => {
       </div>
     `;
 
-    // 5. Enviar correo
+    // Enviar correo
     await transporter.sendMail({
       from: `"CESI 2025" <jose.acosta@unachi.ac.pa>`,
       to: correo,
       subject: "Bienvenido a CESI 2025",
       html,
       attachments: [
-        {
-          filename: "QR-CESI.png",       // archivo adjunto
-          content: qrBufferAttach,
-          encoding: "base64"
-        },
-        {
-          filename: "logo-cesi.png",     // logo inline
-          content: logoBuffer,
-          cid: "logoimage"
-        },
-        {
-          filename: "qr-inline.png",     // QR inline
-          content: qrBufferInline,
-          encoding: "base64",
-          cid: "qrimage"
-        }
+        { filename: "QR-CESI.png", content: qrBufferAttach, encoding: "base64" },
+        { filename: "logo-cesi.png", content: logoBuffer, cid: "logoimage" },
+        { filename: "qr-inline.png", content: qrBufferInline, encoding: "base64", cid: "qrimage" }
       ]
     });
 
