@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import QRCode from "qrcode";
 import nodemailer from "nodemailer";
+import sgTransport from "nodemailer-sendgrid-transport";
 import dotenv from "dotenv";
 import fs from "fs";
 import path from "path";
@@ -32,25 +33,20 @@ app.use(cors({
 
 app.use(express.json());
 
-// Transporter Nodemailer para SendGrid
-const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST, // smtp.sendgrid.net
-  port: 587,
-  secure: false,
-  auth: {
-    user: "apikey",              // obligatorio usar "apikey" literal
-    pass: process.env.EMAIL_PASS // tu API Key de SendGrid
-  },
-  tls: {
-    rejectUnauthorized: false
-  }
-});
+// Transporter Nodemailer con SendGrid API
+const transporter = nodemailer.createTransport(
+  sgTransport({
+    auth: {
+      api_key: process.env.EMAIL_PASS // aquí va tu API Key de SendGrid
+    }
+  })
+);
 
 // Endpoint de prueba
 app.get("/api/test-email", async (req, res) => {
   try {
     await transporter.sendMail({
-      from: `"CESI 2025" <jose.acosta@unachi.ac.pa>`, // remitente verificado en SendGrid
+      from: `"CESI 2025" <${process.env.EMAIL_USER}>`, // remitente verificado en SendGrid
       to: "jose.acosta@unachi.ac.pa", // correo para recibir prueba
       subject: "Prueba Render + SendGrid",
       text: "¡Funciona el envío desde Render usando SendGrid!"
@@ -103,7 +99,7 @@ app.post("/api/registro", async (req, res) => {
 
     // Enviar correo
     await transporter.sendMail({
-      from: `"CESI 2025" <jose.acosta@unachi.ac.pa>`,
+      from: `"CESI 2025" <${process.env.EMAIL_USER}>`,
       to: correo,
       subject: "Bienvenido a CESI 2025",
       html,
