@@ -33,21 +33,21 @@ app.use(cors({
 
 app.use(express.json());
 
-// Transportador Nodemailer con SendGrid
+// Transporter Nodemailer con SendGrid API Key
 const transporter = nodemailer.createTransport(
   sgTransport({
     auth: {
-      api_key: process.env.EMAIL_PASS
+      api_key: process.env.EMAIL_PASS  // Aquí va tu API Key de SendGrid
     }
   })
 );
 
-// Endpoint de prueba de correo
+// Endpoint de prueba
 app.get("/api/test-email", async (req, res) => {
   try {
     await transporter.sendMail({
-      from: `"CESI 2025" <${process.env.EMAIL_USER}>`, // remitente verificado
-      to: "jose.acosta@unachi.ac.pa",                 // tu correo para pruebas
+      from: `"CESI 2025" <jose.acosta@unachi.ac.pa>`,  // remitente verificado
+      to: "jose.acosta@unachi.ac.pa",                 // tu correo para prueba
       subject: "Prueba Render + SendGrid",
       text: "¡Funciona el envío desde Render usando SendGrid!"
     });
@@ -59,27 +59,20 @@ app.get("/api/test-email", async (req, res) => {
   }
 });
 
-// Endpoint de registro de participantes
+// Endpoint de registro con QR (igual que antes)
 app.post("/api/registro", async (req, res) => {
   try {
     const { nombre, correo, cedula } = req.body;
-    if (!nombre || !correo || !cedula) {
-      return res.status(400).json({ ok: false, error: "Faltan datos obligatorios" });
-    }
+    if (!nombre || !correo || !cedula) return res.status(400).json({ ok: false, error: "Faltan datos obligatorios" });
 
-    // QR inline
     const qrDataUrlInline = await QRCode.toDataURL(cedula);
     const qrBufferInline = Buffer.from(qrDataUrlInline.split(",")[1], "base64");
-
-    // QR adjunto
     const qrDataUrlAttach = await QRCode.toDataURL(cedula + "-adjunto");
     const qrBufferAttach = Buffer.from(qrDataUrlAttach.split(",")[1], "base64");
 
-    // Logo local
     const logoPath = path.join(process.cwd(), "public", "logo-cesi.png");
     const logoBuffer = fs.readFileSync(logoPath);
 
-    // HTML del correo
     const html = `
       <div style="font-family: Arial, sans-serif; color: #333;">
         <img src="cid:logoimage" alt="Logo CESI 2025" style="max-width: 150px;" />
@@ -97,9 +90,8 @@ app.post("/api/registro", async (req, res) => {
       </div>
     `;
 
-    // Enviar correo con QR y logo
     await transporter.sendMail({
-      from: `"CESI 2025" <${process.env.EMAIL_USER}>`,
+      from: `"CESI 2025" <jose.acosta@unachi.ac.pa>`,
       to: correo,
       subject: "Bienvenido a CESI 2025",
       html,
