@@ -2,7 +2,6 @@ const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
 const { google } = require("googleapis");
-const nodemailer = require("nodemailer");
 const QRCode = require("qrcode");
 
 dotenv.config();
@@ -22,72 +21,69 @@ const oAuth2Client = new google.auth.OAuth2(
 
 oAuth2Client.setCredentials({ refresh_token: process.env.REFRESH_TOKEN });
 
-// ---------- Función para enviar correo ----------
-async function enviarCorreo({ nombre, correo, cedula, categoria, modalidad }) {
+// ---------- Función para enviar correo con Gmail API ----------
+async function enviarCorreoAPI({ nombre, correo, cedula, categoria, modalidad }) {
   try {
-    const accessToken = await oAuth2Client.getAccessToken();
-
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        type: "OAuth2",
-        user: process.env.SENDER_EMAIL,
-        clientId: process.env.CLIENT_ID,
-        clientSecret: process.env.CLIENT_SECRET,
-        refreshToken: process.env.REFRESH_TOKEN,
-        accessToken: accessToken.token,
-      },
-    });
-
     // Generar QR con la cédula
     const qrCode = await QRCode.toDataURL(cedula);
 
-    const mailOptions = {
-      from: `"${process.env.SENDER_NAME}" <${process.env.SENDER_EMAIL}>`,
-      to: correo,
-      subject: "📩 Confirmación de inscripción - Congreso CESI 2025",
-      html: `
-        <h2>¡Hola ${nombre}!</h2>
-        <p>Gracias por inscribirte al <b>Congreso de Economía, Sociedad e Innovación (CESI 2025)</b>.</p>
-        <p><b>Cédula:</b> ${cedula}</p>
-        <p><b>Categoría:</b> ${categoria}</p>
-        <p><b>Modalidad:</b> ${modalidad}</p>
-        <p>Este es tu código QR de confirmación:</p>
-        <img src="${qrCode}" alt="QR Code" />
-        <br/><br/>
-        <p>⚠️ Revisa tu bandeja de <b>SPAM o correo no deseado</b> si no ves este correo en tu bandeja principal.</p>
-      `,
-    };
+    // Crear mensaje en formato RFC822
+    const rawMessage = [
+      `To: ${correo}`,
+      `From: ${process.env.SENDER_NAME} <${process.env.SENDER_EMAIL}>`,
+      `Subject: Confirmación de registro CESI 2025`,
+      "MIME-Version: 1.0",
+      "Content-Type: text/html; charset=UTF-8",
+      "",
+      `<p>Hola <b>${nombre}</b>,</p>
+      <p>Tu registro al <b>CESI 2025</b> fue exitoso 🎉</p>
+      <p><b>Cédula:</b> ${cedula}<br/>
+      <b>Categoría:</b> ${categoria}<br/>
+      <b>Modalidad:</b> ${modalidad}</p>
+      <p>Presenta este QR al ingresar:</p>
+      <img src="${qrCode}" alt="QR de asistencia" />`,
+    ].join("\n");
 
-    await transporter.sendMail(mailOptions);
-    console.log("✅ Correo enviado a:", correo);
+    // Convertir mensaje a base64
+    const encodedMessage = Buffer.from(rawMessage)
+      .toString("base64")
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_")
+      .replace(/=+$/, "");
+
+    // Enviar con Gmail API
+    const gmail = google.gmail({ version: "v1", auth: oAuth2Client });
+    await gmail.users.messages.send({
+      userId: "me",
+      requestBody: { raw: encodedMessage },
+    });
+
+    console.log("✅ Correo enviado con Gmail API");
+    return true;
   } catch (error) {
-    console.error("❌ Error enviando correo:", error);
-    throw error;
+    console.error("❌ Error al enviar correo:", error);
+    return false;
   }
 }
 
-// ---------- Endpoint para registrar y enviar correo ----------
+// ---------- Endpoint de registro ----------
 app.post("/api/registro", async (req, res) => {
-  try {
-    const { nombre, correo, cedula, categoria, modalidad } = req.body;
+  const { nombre, correo, cedula, categoria, modalidad } = req.body;
 
-    if (!nombre || !correo || !cedula) {
-      return res.status(400).json({ error: "Faltan datos obligatorios" });
-    }
+  console.log("📩 Nuevo registro:", req.body);
 
-    await enviarCorreo({ nombre, correo, cedula, categoria, modalidad });
+  const enviado = await enviarCorreoAPI({ nombre, correo, cedula, categoria, modalidad });
 
-    res.status(200).json({ message: "✅ Registro exitoso y correo enviado" });
-  } catch (error) {
-    console.error("❌ Error en /api/registro:", error);
-    res.status(500).json({ error: "Error al registrar y enviar correo" });
+  if (enviado) {
+    res.json({ message: "Correo de confirmación enviado ✅" });
+  } else {
+    res.status(500).json({ error: "Error al enviar correo ❌" });
   }
 });
 
 // ---------- Endpoint de prueba ----------
 app.get("/ping", (req, res) => {
-  res.json({ message: "🏓 Servidor CESI activo" });
+  res.json({ message: "Servidor activo 🚀 con Gmail API" });
 });
 
 // ---------- Iniciar servidor ----------
