@@ -27,24 +27,49 @@ async function enviarCorreoAPI({ nombre, correo, cedula, categoria, modalidad })
     // Generar QR con la cédula
     const qrCode = await QRCode.toDataURL(cedula);
 
-    // Crear mensaje en formato RFC822
+    // Crear mensaje en formato RFC822 (HTML profesional)
     const rawMessage = [
       `To: ${correo}`,
       `From: ${process.env.SENDER_NAME} <${process.env.SENDER_EMAIL}>`,
-      `Subject: Confirmación de registro CESI 2025`,
+      `Subject: ✅ Confirmación de registro - CESI 2025`,
       "MIME-Version: 1.0",
       "Content-Type: text/html; charset=UTF-8",
       "",
-      `<p>Hola <b>${nombre}</b>,</p>
-      <p>Tu registro al <b>CESI 2025</b> fue exitoso 🎉</p>
-      <p><b>Cédula:</b> ${cedula}<br/>
-      <b>Categoría:</b> ${categoria}<br/>
-      <b>Modalidad:</b> ${modalidad}</p>
-      <p>Presenta este QR al ingresar:</p>
-      <img src="${qrCode}" alt="QR de asistencia" />`,
+      `
+      <div style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
+        <h2 style="color: #004d40;">¡Hola ${nombre}!</h2>
+
+        <p>Tu registro al <b>Congreso de Economía CESI 2025</b> ha sido <b>confirmado exitosamente</b> 🎉.</p>
+        
+        <p><b>Detalles de tu inscripción:</b></p>
+        <ul>
+          <li><b>Cédula:</b> ${cedula}</li>
+          <li><b>Categoría:</b> ${categoria}</li>
+          <li><b>Modalidad:</b> ${modalidad}</li>
+        </ul>
+
+        <p>Por favor presenta este código QR al ingresar al evento:</p>
+        <div style="text-align: center; margin: 20px 0;">
+          <img src="${qrCode}" alt="Código QR" style="width:200px; height:200px;" />
+        </div>
+
+        <p style="font-size: 14px; color: #555;">
+          📌 Mantente informado y disfruta de nuestro contenido en el canal oficial de la Facultad:<br/>
+          <a href="https://www.youtube.com/@FACULTADDEECONOMIAUNACHI" target="_blank">
+            👉 Visita nuestro canal de YouTube
+          </a>
+        </p>
+
+        <p>¡Gracias por ser parte del CESI 2025!</p>
+        <hr/>
+        <p style="font-size: 12px; color: #888;">
+          Este es un correo automático, por favor no responder a este mensaje.
+        </p>
+      </div>
+      `,
     ].join("\n");
 
-    // Convertir mensaje a base64
+    // Codificar mensaje en base64
     const encodedMessage = Buffer.from(rawMessage)
       .toString("base64")
       .replace(/\+/g, "-")
@@ -58,7 +83,7 @@ async function enviarCorreoAPI({ nombre, correo, cedula, categoria, modalidad })
       requestBody: { raw: encodedMessage },
     });
 
-    console.log("✅ Correo enviado con Gmail API");
+    console.log(`✅ Correo enviado a ${correo}`);
     return true;
   } catch (error) {
     console.error("❌ Error al enviar correo:", error);
@@ -70,14 +95,14 @@ async function enviarCorreoAPI({ nombre, correo, cedula, categoria, modalidad })
 app.post("/api/registro", async (req, res) => {
   const { nombre, correo, cedula, categoria, modalidad } = req.body;
 
-  console.log("📩 Nuevo registro:", req.body);
+  console.log("📩 Nuevo registro recibido:", req.body);
 
   const enviado = await enviarCorreoAPI({ nombre, correo, cedula, categoria, modalidad });
 
   if (enviado) {
-    res.json({ message: "Correo de confirmación enviado ✅" });
+    res.json({ message: "📧 Correo de confirmación enviado con éxito ✅" });
   } else {
-    res.status(500).json({ error: "Error al enviar correo ❌" });
+    res.status(500).json({ error: "❌ Ocurrió un error al enviar el correo" });
   }
 });
 
