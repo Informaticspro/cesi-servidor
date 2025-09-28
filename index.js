@@ -1,114 +1,103 @@
 import express from "express";
-import cors from "cors";
-import QRCode from "qrcode";
+import { google } from "googleapis";
 import nodemailer from "nodemailer";
 import dotenv from "dotenv";
-import fs from "fs";
-import path from "path";
+import QRCode from "qrcode";
 
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3001;
-
-// Orígenes permitidos
-const allowedOrigins = [
-  "http://localhost:5173",
-  "https://cesi-2025.netlify.app",
-  "capacitor://localhost",
-  "http://localhost",
-  "https://localhost",
-];
-
-app.use(
-  cors({
-    origin: function (origin, callback) {
-      if (!origin) return callback(null, true);
-      if (allowedOrigins.includes(origin)) return callback(null, true);
-      callback(new Error("No permitido por CORS"));
-    },
-    methods: ["GET", "POST", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  })
-);
-
 app.use(express.json());
 
-// ✅ Nodemailer con OAuth2
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    type: "OAuth2",
-    user: process.env.SENDER_EMAIL,
-    clientId: process.env.CLIENT_ID,
-    clientSecret: process.env.CLIENT_SECRET,
-    refreshToken: process.env.REFRESH_TOKEN,
-  },
+// Configuración OAuth2 con Google API
+const oAuth2Client = new google.auth.OAuth2(
+  process.env.CLIENT_ID,
+  process.env.CLIENT_SECRET
+);
+
+oAuth2Client.setCredentials({
+  refresh_token: process.env.REFRESH_TOKEN,
 });
 
-// Endpoint de prueba
-app.get("/api/test-email", async (req, res) => {
+// 📩 Función para enviar correo con QR adjunto
+async function enviarCorreoConQR({ to, nombre, cedula }) {
   try {
-    await transporter.sendMail({
-      from: `"${process.env.SENDER_NAME}" <${process.env.SENDER_EMAIL}>`,
-      to: process.env.SENDER_EMAIL,
-      subject: "Prueba Render + Gmail API ✔",
-      text: "¡Funciona el envío desde Render usando Gmail API con OAuth2!",
+    const accessToken = await oAuth2Client.getAccessToken();
+
+    // Generar código QR (ejemplo: cedula como contenido)
+    const qrCodeDataUrl = await QRCode.toDataURL(cedula);
+
+    // Transporter Gmail API
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        type: "OAuth2",
+        user: process.env.SENDER_EMAIL,
+        clientId: process.env.CLIENT_ID,
+        clientSecret: process.env.CLIENT_SECRET,
+        refreshToken: process.env.REFRESH_TOKEN,
+        accessToken: accessToken.token,
+      },
     });
 
-    res.json({ ok: true, message: "Correo de prueba enviado exitosamente" });
-  } catch (error) {
-    console.error("Error al enviar correo de prueba:", error);
-    res.status(500).json({ ok: false, error: error.message });
-  }
-});
-
-// Endpoint de registro con QR
-app.post("/api/registro", async (req, res) => {
-  console.log("📩 Datos recibidos en /api/registro:", req.body);
-
-  try {
-    const { nombre, correo, cedula } = req.body;
-    if (!nombre || !correo || !cedula) {
-      return res
-        .status(400)
-        .json({ ok: false, error: "Faltan datos obligatorios" });
-    }
-
-    // Generar QR
-    const qrDataUrlInline = await QRCode.toDataURL(cedula);
-    const qrBufferInline = Buffer.from(qrDataUrlInline.split(",")[1], "base64");
-
-    const html = `
-      <h2>Hola, ${nombre}!</h2>
-      <p>Gracias por registrarte en <b>CESI 2025</b>.</p>
-      <p>Este es tu código QR:</p>
-      <img src="cid:qrimage" style="width:200px;" />
-    `;
-
-    await transporter.sendMail({
+    const mailOptions = {
       from: `"${process.env.SENDER_NAME}" <${process.env.SENDER_EMAIL}>`,
-      to: correo,
-      subject: "Bienvenido a CESI 2025",
-      html,
+      to,
+      subject: "🎟️ Confirmación de inscripción - CESI 2025",
+      text: `Hola ${nombre}, tu inscripción al CESI 2025 ha sido confirmada. Adjuntamos tu código QR.`,
+      html: `
+        <h2>¡Hola ${nombre}!</h2>
+        <p>🎉 Gracias por inscribirte en el <b>CESI 2025</b>.</p>
+        <p>Tu cédula: <b>${cedula}</b></p>
+        <p>Adjuntamos tu código QR para el ingreso al evento.</p>
+        <br/>
+        <p>Saludos,<br/>Equipo CESI 2025</p>
+        <p style="color:red;font-size:0.9em">⚠️ Si no ves este correo, revisa tu carpeta de SPAM o Correo No Deseado.</p>
+      `,
       attachments: [
         {
-          filename: "qr-inline.png",
-          content: qrBufferInline,
+          filename: `QR_${cedula}.png`,
+          content: qrCodeDataUrl.split("base64,")[1],
           encoding: "base64",
-          cid: "qrimage",
         },
       ],
+    };
+
+    const result = await transporter.sendMail(mailOptions);
+    return result;
+  } catch (error) {
+    console.error("❌ Error enviando correo:", error);
+    throw error;
+  }
+}
+
+// 📍 Endpoint de inscripción
+app.post("/api/inscribir", async (req, res) => {
+  const { nombre, correo, cedula } = req.body;
+
+  try {
+    const resultado = await enviarCorreoConQR({
+      to: correo,
+      nombre,
+      cedula,
     });
 
-    res.json({ ok: true, message: "Correo enviado exitosamente" });
+    res.json({
+      success: true,
+      message: "✅ Inscripción confirmada, correo enviado.",
+      result: resultado,
+    });
   } catch (error) {
-    console.error("❌ Error en /api/registro:", error);
-    res.status(500).json({ ok: false, error: error.message });
+    res.status(500).json({
+      success: false,
+      message: "❌ Error al enviar el correo",
+      error: error.message,
+    });
   }
 });
 
-// ✅ Importante: escuchar en 0.0.0.0 (Render necesita esto)
-app.listen(PORT, "0.0.0.0", () => {
-  console.log(`🚀 Servidor CESI escuchando en http://0.0.0.0:${PORT}`);
+// 🚀 Iniciar servidor
+const PORT = process.env.PORT || 3001;
+app.listen(PORT, () => {
+  console.log(`Servidor CESI corriendo en puerto ${PORT}`);
 });
