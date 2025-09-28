@@ -1,33 +1,32 @@
-import express from "express";
-import { google } from "googleapis";
-import nodemailer from "nodemailer";
-import dotenv from "dotenv";
-import QRCode from "qrcode";
+const express = require("express");
+const cors = require("cors");
+const QRCode = require("qrcode");
+const nodemailer = require("nodemailer");
+const dotenv = require("dotenv");
+const { google } = require("googleapis");
 
 dotenv.config();
 
 const app = express();
+const PORT = process.env.PORT || 3001;
+
+app.use(cors());
 app.use(express.json());
 
-// Configuración OAuth2 con Google API
+// ---------- Configuración de Google OAuth2 ----------
 const oAuth2Client = new google.auth.OAuth2(
   process.env.CLIENT_ID,
-  process.env.CLIENT_SECRET
+  process.env.CLIENT_SECRET,
+  "https://developers.google.com/oauthplayground" // redirect_uri usado al generar el token
 );
 
-oAuth2Client.setCredentials({
-  refresh_token: process.env.REFRESH_TOKEN,
-});
+oAuth2Client.setCredentials({ refresh_token: process.env.REFRESH_TOKEN });
 
-// 📩 Función para enviar correo con QR adjunto
-async function enviarCorreoConQR({ to, nombre, cedula }) {
+// ---------- Función para enviar correo ----------
+async function enviarCorreo({ nombre, correo, cedula, categoria, modalidad }) {
   try {
     const accessToken = await oAuth2Client.getAccessToken();
 
-    // Generar código QR (ejemplo: cedula como contenido)
-    const qrCodeDataUrl = await QRCode.toDataURL(cedula);
-
-    // Transporter Gmail API
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
@@ -40,64 +39,64 @@ async function enviarCorreoConQR({ to, nombre, cedula }) {
       },
     });
 
+    // Generar QR con la cédula
+    const qrCode = await QRCode.toDataURL(cedula);
+
     const mailOptions = {
       from: `"${process.env.SENDER_NAME}" <${process.env.SENDER_EMAIL}>`,
-      to,
-      subject: "🎟️ Confirmación de inscripción - CESI 2025",
-      text: `Hola ${nombre}, tu inscripción al CESI 2025 ha sido confirmada. Adjuntamos tu código QR.`,
+      to: correo,
+      subject: "✅ Confirmación de inscripción - CESI 2025",
       html: `
-        <h2>¡Hola ${nombre}!</h2>
-        <p>🎉 Gracias por inscribirte en el <b>CESI 2025</b>.</p>
-        <p>Tu cédula: <b>${cedula}</b></p>
-        <p>Adjuntamos tu código QR para el ingreso al evento.</p>
-        <br/>
-        <p>Saludos,<br/>Equipo CESI 2025</p>
-        <p style="color:red;font-size:0.9em">⚠️ Si no ves este correo, revisa tu carpeta de SPAM o Correo No Deseado.</p>
+        <h2>Hola ${nombre},</h2>
+        <p>¡Gracias por inscribirte al <b>Congreso CESI 2025</b>!</p>
+        
+        <p><b>Detalles de tu inscripción:</b></p>
+        <ul>
+          <li><b>Cédula:</b> ${cedula}</li>
+          <li><b>Categoría:</b> ${categoria || "No especificada"}</li>
+          <li><b>Modalidad:</b> ${modalidad || "No especificada"}</li>
+        </ul>
+
+        <p>Tu registro fue completado exitosamente. Presenta este código QR en el evento:</p>
+        <img src="${qrCode}" alt="QR Code" style="width:200px; height:200px;" />
+        
+        <p>⚠️ Si no ves este mensaje en tu bandeja de entrada, revisa también la carpeta <b>SPAM</b>.</p>
+        
+        <br>
+        <p>Atentamente,<br>Comité Organizador CESI 2025</p>
       `,
-      attachments: [
-        {
-          filename: `QR_${cedula}.png`,
-          content: qrCodeDataUrl.split("base64,")[1],
-          encoding: "base64",
-        },
-      ],
     };
 
-    const result = await transporter.sendMail(mailOptions);
-    return result;
+    const info = await transporter.sendMail(mailOptions);
+    console.log("📩 Correo enviado con ID:", info.messageId);
+    return info.messageId;
   } catch (error) {
-    console.error("❌ Error enviando correo:", error);
+    console.error("❌ Error al enviar correo:", error);
     throw error;
   }
 }
 
-// 📍 Endpoint de inscripción
-app.post("/api/inscribir", async (req, res) => {
-  const { nombre, correo, cedula } = req.body;
-
+// ---------- Ruta de inscripción ----------
+app.post("/api/registro", async (req, res) => {
   try {
-    const resultado = await enviarCorreoConQR({
-      to: correo,
-      nombre,
-      cedula,
-    });
+    const { nombre, correo, cedula, categoria, modalidad } = req.body;
 
-    res.json({
-      success: true,
-      message: "✅ Inscripción confirmada, correo enviado.",
-      result: resultado,
-    });
+    if (!nombre || !correo || !cedula) {
+      return res.status(400).json({ success: false, error: "Faltan datos" });
+    }
+
+    console.log("📝 Nuevo registro:", { nombre, correo, cedula, categoria, modalidad });
+
+    // Enviar correo de confirmación
+    const messageId = await enviarCorreo({ nombre, correo, cedula, categoria, modalidad });
+
+    res.json({ success: true, messageId });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "❌ Error al enviar el correo",
-      error: error.message,
-    });
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// 🚀 Iniciar servidor
-const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-  console.log(`Servidor CESI corriendo en puerto ${PORT}`);
+// ---------- Iniciar servidor ----------
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`🚀 Servidor CESI escuchando en http://localhost:${PORT}`);
 });
