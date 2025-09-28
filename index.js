@@ -39,7 +39,7 @@ async function enviarCorreoAPI({ nombre, correo, cedula, categoria, modalidad })
       <div style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
         <h2 style="color: #004d40;">¡Hola ${nombre}!</h2>
 
-        <p>Tu registro al <b>Congreso de Economía CESI 2025</b> ha sido <b>confirmado exitosamente</b> 🎉.</p>
+        <p>Tu registro al <b>Congreso de Economía CESI 2025</b> ha sido <b>confirmado exitosamente!</b> 🎉.</p>
         
         <p><b>Detalles de tu inscripción:</b></p>
         <ul>
