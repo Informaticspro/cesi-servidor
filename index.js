@@ -11,7 +11,7 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// 🌍 Orígenes permitidos
+// Orígenes permitidos
 const allowedOrigins = [
   "http://localhost:5173",
   "https://cesi-2025.netlify.app",
@@ -34,7 +34,7 @@ app.use(
 
 app.use(express.json());
 
-// 📧 Transporter Nodemailer con Gmail OAuth2
+// ✅ Nodemailer con OAuth2
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
@@ -46,25 +46,27 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// 🔍 Endpoint de prueba
+// Endpoint de prueba
 app.get("/api/test-email", async (req, res) => {
   try {
     await transporter.sendMail({
       from: `"${process.env.SENDER_NAME}" <${process.env.SENDER_EMAIL}>`,
-      to: process.env.SENDER_EMAIL, // se envía a ti mismo
-      subject: "Prueba CESI 2025 ✔",
+      to: process.env.SENDER_EMAIL,
+      subject: "Prueba Render + Gmail API ✔",
       text: "¡Funciona el envío desde Render usando Gmail API con OAuth2!",
     });
 
     res.json({ ok: true, message: "Correo de prueba enviado exitosamente" });
   } catch (error) {
-    console.error("❌ Error al enviar correo de prueba:", error);
+    console.error("Error al enviar correo de prueba:", error);
     res.status(500).json({ ok: false, error: error.message });
   }
 });
 
-// 📝 Endpoint de registro con QR
+// Endpoint de registro con QR
 app.post("/api/registro", async (req, res) => {
+  console.log("📩 Datos recibidos en /api/registro:", req.body);
+
   try {
     const { nombre, correo, cedula } = req.body;
     if (!nombre || !correo || !cedula) {
@@ -73,67 +75,40 @@ app.post("/api/registro", async (req, res) => {
         .json({ ok: false, error: "Faltan datos obligatorios" });
     }
 
-    // 🔑 Generar QR (inline + adjunto)
+    // Generar QR
     const qrDataUrlInline = await QRCode.toDataURL(cedula);
     const qrBufferInline = Buffer.from(qrDataUrlInline.split(",")[1], "base64");
 
-    const qrDataUrlAttach = await QRCode.toDataURL(cedula + "-adjunto");
-    const qrBufferAttach = Buffer.from(qrDataUrlAttach.split(",")[1], "base64");
-
-    // 📌 Logo local opcional (si existe en /public)
-    const logoPath = path.join(process.cwd(), "public", "logo-cesi.png");
-    const logoBuffer = fs.existsSync(logoPath)
-      ? fs.readFileSync(logoPath)
-      : null;
-
-    // 📨 HTML del correo
     const html = `
-      <div style="font-family: Arial, sans-serif; color: #333;">
-        ${logoBuffer ? `<img src="cid:logoimage" alt="Logo CESI 2025" style="max-width: 150px;" />` : ""}
-        <h2>Hola, ${nombre}!</h2>
-        <p>Gracias por registrarte en <b>CESI 2025</b>.</p>
-        <p>Este es tu código QR:</p>
-        <img src="cid:qrimage" alt="Código QR" style="width: 200px;" />
-        <br /><br />
-        <p>
-          Visita nuestro canal oficial en 
-          <a href="https://www.youtube.com/@FACULTADDEECONOMIAUNACHI" target="_blank" style="color: #1a73e8; text-decoration: none;">
-            YouTube
-          </a>
-        </p>
-        <p style="color:#d93025;">
-          ⚠️ Si no ves este correo en tu bandeja principal, revisa la carpeta <b>Spam</b> o <b>Correo no deseado</b>.
-        </p>
-      </div>
+      <h2>Hola, ${nombre}!</h2>
+      <p>Gracias por registrarte en <b>CESI 2025</b>.</p>
+      <p>Este es tu código QR:</p>
+      <img src="cid:qrimage" style="width:200px;" />
     `;
 
-    // 📎 Configuración del correo
     await transporter.sendMail({
       from: `"${process.env.SENDER_NAME}" <${process.env.SENDER_EMAIL}>`,
       to: correo,
       subject: "Bienvenido a CESI 2025",
       html,
       attachments: [
-        { filename: "QR-CESI.png", content: qrBufferAttach, encoding: "base64" },
-        logoBuffer
-          ? { filename: "logo-cesi.png", content: logoBuffer, cid: "logoimage" }
-          : null,
         {
           filename: "qr-inline.png",
           content: qrBufferInline,
           encoding: "base64",
           cid: "qrimage",
         },
-      ].filter(Boolean), // elimina null si no hay logo
+      ],
     });
 
     res.json({ ok: true, message: "Correo enviado exitosamente" });
   } catch (error) {
-    console.error("❌ Error al enviar correo:", error);
+    console.error("❌ Error en /api/registro:", error);
     res.status(500).json({ ok: false, error: error.message });
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 Servidor CESI escuchando en http://localhost:${PORT}`);
+// ✅ Importante: escuchar en 0.0.0.0 (Render necesita esto)
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`🚀 Servidor CESI escuchando en http://0.0.0.0:${PORT}`);
 });
