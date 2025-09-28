@@ -1,9 +1,9 @@
 const express = require("express");
 const cors = require("cors");
-const QRCode = require("qrcode");
-const nodemailer = require("nodemailer");
 const dotenv = require("dotenv");
 const { google } = require("googleapis");
+const nodemailer = require("nodemailer");
+const QRCode = require("qrcode");
 
 dotenv.config();
 
