@@ -45,58 +45,52 @@ async function enviarCorreo({ nombre, correo, cedula, categoria, modalidad }) {
     const mailOptions = {
       from: `"${process.env.SENDER_NAME}" <${process.env.SENDER_EMAIL}>`,
       to: correo,
-      subject: "✅ Confirmación de inscripción - CESI 2025",
+      subject: "📩 Confirmación de inscripción - Congreso CESI 2025",
       html: `
-        <h2>Hola ${nombre},</h2>
-        <p>¡Gracias por inscribirte al <b>Congreso CESI 2025</b>!</p>
-        
-        <p><b>Detalles de tu inscripción:</b></p>
-        <ul>
-          <li><b>Cédula:</b> ${cedula}</li>
-          <li><b>Categoría:</b> ${categoria || "No especificada"}</li>
-          <li><b>Modalidad:</b> ${modalidad || "No especificada"}</li>
-        </ul>
-
-        <p>Tu registro fue completado exitosamente. Presenta este código QR en el evento:</p>
-        <img src="${qrCode}" alt="QR Code" style="width:200px; height:200px;" />
-        
-        <p>⚠️ Si no ves este mensaje en tu bandeja de entrada, revisa también la carpeta <b>SPAM</b>.</p>
-        
-        <br>
-        <p>Atentamente,<br>Comité Organizador CESI 2025</p>
+        <h2>¡Hola ${nombre}!</h2>
+        <p>Gracias por inscribirte al <b>Congreso de Economía, Sociedad e Innovación (CESI 2025)</b>.</p>
+        <p><b>Cédula:</b> ${cedula}</p>
+        <p><b>Categoría:</b> ${categoria}</p>
+        <p><b>Modalidad:</b> ${modalidad}</p>
+        <p>Este es tu código QR de confirmación:</p>
+        <img src="${qrCode}" alt="QR Code" />
+        <br/><br/>
+        <p>⚠️ Revisa tu bandeja de <b>SPAM o correo no deseado</b> si no ves este correo en tu bandeja principal.</p>
       `,
     };
 
-    const info = await transporter.sendMail(mailOptions);
-    console.log("📩 Correo enviado con ID:", info.messageId);
-    return info.messageId;
+    await transporter.sendMail(mailOptions);
+    console.log("✅ Correo enviado a:", correo);
   } catch (error) {
-    console.error("❌ Error al enviar correo:", error);
+    console.error("❌ Error enviando correo:", error);
     throw error;
   }
 }
 
-// ---------- Ruta de inscripción ----------
+// ---------- Endpoint para registrar y enviar correo ----------
 app.post("/api/registro", async (req, res) => {
   try {
     const { nombre, correo, cedula, categoria, modalidad } = req.body;
 
     if (!nombre || !correo || !cedula) {
-      return res.status(400).json({ success: false, error: "Faltan datos" });
+      return res.status(400).json({ error: "Faltan datos obligatorios" });
     }
 
-    console.log("📝 Nuevo registro:", { nombre, correo, cedula, categoria, modalidad });
+    await enviarCorreo({ nombre, correo, cedula, categoria, modalidad });
 
-    // Enviar correo de confirmación
-    const messageId = await enviarCorreo({ nombre, correo, cedula, categoria, modalidad });
-
-    res.json({ success: true, messageId });
+    res.status(200).json({ message: "✅ Registro exitoso y correo enviado" });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    console.error("❌ Error en /api/registro:", error);
+    res.status(500).json({ error: "Error al registrar y enviar correo" });
   }
 });
 
+// ---------- Endpoint de prueba ----------
+app.get("/ping", (req, res) => {
+  res.json({ message: "🏓 Servidor CESI activo" });
+});
+
 // ---------- Iniciar servidor ----------
-app.listen(PORT, "0.0.0.0", () => {
+app.listen(PORT, () => {
   console.log(`🚀 Servidor CESI escuchando en http://localhost:${PORT}`);
 });
