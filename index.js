@@ -2,7 +2,6 @@ import express from "express";
 import cors from "cors";
 import QRCode from "qrcode";
 import nodemailer from "nodemailer";
-import sgTransport from "nodemailer-sendgrid-transport";
 import dotenv from "dotenv";
 import fs from "fs";
 import path from "path";
@@ -21,35 +20,39 @@ const allowedOrigins = [
   "https://localhost",
 ];
 
-app.use(cors({
-  origin: function (origin, callback) {
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) return callback(null, true);
-    callback(new Error("No permitido por CORS"));
-  },
-  methods: ["GET", "POST", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"]
-}));
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      callback(new Error("No permitido por CORS"));
+    },
+    methods: ["GET", "POST", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
 
 app.use(express.json());
 
-// Transporter Nodemailer con SendGrid API Key
-const transporter = nodemailer.createTransport(
-  sgTransport({
-    auth: {
-      api_key: process.env.EMAIL_PASS  // Aquí va tu API Key de SendGrid
-    }
-  })
-);
+// ✅ Transporter Nodemailer con Gmail SMTP
+const transporter = nodemailer.createTransport({
+  host: process.env.EMAIL_HOST, // smtp.gmail.com
+  port: Number(process.env.EMAIL_PORT || 465),
+  secure: String(process.env.EMAIL_SECURE || "true") === "true",
+  auth: {
+    user: process.env.EMAIL_USER, // tu gmail
+    pass: process.env.EMAIL_PASS, // tu app password
+  },
+});
 
 // Endpoint de prueba
 app.get("/api/test-email", async (req, res) => {
   try {
     await transporter.sendMail({
-      from: `"CESI 2025" <jose.acosta@unachi.ac.pa>`,  // remitente verificado
-      to: "jose.acosta@unachi.ac.pa",                 // tu correo para prueba
-      subject: "Prueba Render + SendGrid",
-      text: "¡Funciona el envío desde Render usando SendGrid!"
+      from: `"${process.env.SENDER_NAME}" <${process.env.SENDER_EMAIL}>`,
+      to: process.env.SENDER_EMAIL, // te lo envías a ti mismo
+      subject: "Prueba Render + Gmail ✔",
+      text: "¡Funciona el envío desde Render usando Gmail SMTP!",
     });
 
     res.json({ ok: true, message: "Correo de prueba enviado exitosamente" });
@@ -59,19 +62,27 @@ app.get("/api/test-email", async (req, res) => {
   }
 });
 
-// Endpoint de registro con QR (igual que antes)
+// Endpoint de registro con QR
 app.post("/api/registro", async (req, res) => {
   try {
     const { nombre, correo, cedula } = req.body;
-    if (!nombre || !correo || !cedula) return res.status(400).json({ ok: false, error: "Faltan datos obligatorios" });
+    if (!nombre || !correo || !cedula) {
+      return res
+        .status(400)
+        .json({ ok: false, error: "Faltan datos obligatorios" });
+    }
 
+    // Generar QR
     const qrDataUrlInline = await QRCode.toDataURL(cedula);
     const qrBufferInline = Buffer.from(qrDataUrlInline.split(",")[1], "base64");
     const qrDataUrlAttach = await QRCode.toDataURL(cedula + "-adjunto");
     const qrBufferAttach = Buffer.from(qrDataUrlAttach.split(",")[1], "base64");
 
+    // Logo local
     const logoPath = path.join(process.cwd(), "public", "logo-cesi.png");
-    const logoBuffer = fs.readFileSync(logoPath);
+    const logoBuffer = fs.existsSync(logoPath)
+      ? fs.readFileSync(logoPath)
+      : null;
 
     const html = `
       <div style="font-family: Arial, sans-serif; color: #333;">
@@ -91,15 +102,22 @@ app.post("/api/registro", async (req, res) => {
     `;
 
     await transporter.sendMail({
-      from: `"CESI 2025" <jose.acosta@unachi.ac.pa>`,
+      from: `"${process.env.SENDER_NAME}" <${process.env.SENDER_EMAIL}>`,
       to: correo,
       subject: "Bienvenido a CESI 2025",
       html,
       attachments: [
         { filename: "QR-CESI.png", content: qrBufferAttach, encoding: "base64" },
-        { filename: "logo-cesi.png", content: logoBuffer, cid: "logoimage" },
-        { filename: "qr-inline.png", content: qrBufferInline, encoding: "base64", cid: "qrimage" }
-      ]
+        logoBuffer
+          ? { filename: "logo-cesi.png", content: logoBuffer, cid: "logoimage" }
+          : null,
+        {
+          filename: "qr-inline.png",
+          content: qrBufferInline,
+          encoding: "base64",
+          cid: "qrimage",
+        },
+      ].filter(Boolean), // elimina null si no hay logo
     });
 
     res.json({ ok: true, message: "Correo enviado exitosamente" });
