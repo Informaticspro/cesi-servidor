@@ -24,18 +24,15 @@ oAuth2Client.setCredentials({ refresh_token: process.env.REFRESH_TOKEN });
 // ---------- Función para enviar correo con Gmail API ----------
 async function enviarCorreoAPI({ nombre, correo, cedula, categoria, modalidad }) {
   try {
-    // Generar QR con la cédula
-    const qrCode = await QRCode.toDataURL(cedula);
+    // Generar QR como Buffer (para inline attachment)
+    const qrBuffer = await QRCode.toBuffer(cedula);
 
-    // Crear mensaje en formato RFC822 (HTML profesional)
-    const rawMessage = [
-      `To: ${correo}`,
-      `From: ${process.env.SENDER_NAME} <${process.env.SENDER_EMAIL}>`,
-      `Subject: ✅ Confirmación de registro - CESI 2025`,
-      "MIME-Version: 1.0",
-      "Content-Type: text/html; charset=UTF-8",
-      "",
-      `
+    // Asunto codificado correctamente en UTF-8
+    const subject = "✅ Confirmación de registro - CESI 2025";
+    const encodedSubject = `=?UTF-8?B?${Buffer.from(subject).toString("base64")}?=`;
+
+    // Crear cuerpo HTML con referencia al QR por cid
+    const htmlBody = `
       <div style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
         <h2 style="color: #004d40;">¡Hola ${nombre}!</h2>
 
@@ -44,13 +41,13 @@ async function enviarCorreoAPI({ nombre, correo, cedula, categoria, modalidad })
         <p><b>Detalles de tu inscripción:</b></p>
         <ul>
           <li><b>Cédula:</b> ${cedula}</li>
-          <li><b>Categoría:</b> ${categoria}</li>
-          <li><b>Modalidad:</b> ${modalidad}</li>
+          <li><b>Categoría:</b> ${categoria || "No especificada"}</li>
+          <li><b>Modalidad:</b> ${modalidad || "No especificada"}</li>
         </ul>
 
         <p>Por favor presenta este código QR al ingresar al evento:</p>
         <div style="text-align: center; margin: 20px 0;">
-          <img src="${qrCode}" alt="Código QR" style="width:200px; height:200px;" />
+          <img src="cid:qrimage" alt="Código QR" style="width:200px; height:200px;" />
         </div>
 
         <p style="font-size: 14px; color: #555;">
@@ -66,10 +63,32 @@ async function enviarCorreoAPI({ nombre, correo, cedula, categoria, modalidad })
           Este es un correo automático, por favor no responder a este mensaje.
         </p>
       </div>
-      `,
+    `;
+
+    // Crear mensaje MIME con adjunto inline
+    const boundary = "boundary-example";
+    const rawMessage = [
+      `To: ${correo}`,
+      `From: ${process.env.SENDER_NAME} <${process.env.SENDER_EMAIL}>`,
+      `Subject: ${encodedSubject}`,
+      "MIME-Version: 1.0",
+      `Content-Type: multipart/related; boundary="${boundary}"`,
+      "",
+      `--${boundary}`,
+      "Content-Type: text/html; charset=UTF-8",
+      "",
+      htmlBody,
+      "",
+      `--${boundary}`,
+      "Content-Type: image/png",
+      "Content-Transfer-Encoding: base64",
+      "Content-ID: <qrimage>",
+      "",
+      qrBuffer.toString("base64"),
+      `--${boundary}--`
     ].join("\n");
 
-    // Codificar mensaje en base64
+    // Codificar en base64URL
     const encodedMessage = Buffer.from(rawMessage)
       .toString("base64")
       .replace(/\+/g, "-")
